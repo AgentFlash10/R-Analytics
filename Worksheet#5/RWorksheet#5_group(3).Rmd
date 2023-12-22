@@ -1,0 +1,273 @@
+---
+title: "RWorksheet#5_group(3)"
+author: "Songaling, Porras, Sumintao, Lumahan"
+date: "2023-12-22"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. Each group needs to extract the top 50 tv shows in Imdb.com. It will include the rank, the title of the
+tv show, tv rating, the number of people who voted, the number of episodes, the year it was released.
+```{r,error=TRUE}
+
+library(dplyr)
+library(rvest)
+library(polite)
+library(httr)
+
+url <- "https://www.imdb.com/chart/tvmeter/?ref_=nv_tvv_mptv"
+
+session <- bow(url, user_agent = "Educational")
+session
+
+#RANK
+ranking <- scrape(session) %>%
+    html_nodes("div.sc-94da5b1b-0.soBIM.meter-const-ranking.sc-479faa3c-6.glWBvR.cli-meter-title-header") %>%
+    html_text
+ranks_top50 <- ranking[1:50]
+ranks_top50 <- substr(ranks_top50, 1, 2)
+ranks_top50
+
+
+#TITLE
+title_list <- scrape(session) %>%
+    html_nodes("h3.ipc-title__text") %>%
+    html_text
+titles_top50 <- title_list[2:51]
+titles_top50
+
+
+#TV RATING
+tvratings <- scrape(session) %>%
+    html_nodes("span.ipc-rating-star.ipc-rating-star--base.ipc-rating-star--imdb.ratingGroup--imdb-rating:contains('.')") %>%
+    html_text
+tv_ratingtop50 <- tvratings[1:50]
+tv_rating50only <- substr(tv_ratingtop50, 1, 3)
+tv_rating50only
+
+
+#VOTES
+votes_num <- scrape(session) %>%
+    html_nodes("span.ipc-rating-star--voteCount") %>%
+    html_text
+num_votestop50 <- votes_num[1:50]
+num_votestop50
+
+
+#NUMBER OF EPISODES
+eps_num <- scrape(session) %>%
+    html_nodes("span.sc-479faa3c-8.bNrEFi.cli-title-metadata-item:contains('eps')") %>%
+    html_text %>%
+  gsub("\\D", "", .)
+num_eps_top50 <- eps_num[1:50]
+num_eps_top50
+
+
+#YEAR RELEASED
+year_released <- scrape(session) %>%
+    html_nodes("span.sc-479faa3c-8.bNrEFi.cli-title-metadata-item:contains('20')") %>%
+    html_text
+year_releasedtop50 <- year_released[1:50]
+
+
+# CREATE DATAFRAME
+tv_shows_data <- data.frame(
+  Rank = ranks_top50,
+  Title = titles_top50,
+  TV_Rating = tv_rating50only,
+  Num_Votes = num_votestop50,
+  Num_Episodes = num_eps_top50,
+  Year_Released = year_releasedtop50
+)
+
+View(tv_shows_data)
+```
+
+2. From the 50 tv shows, select at least 5 tv shows to scrape the user reviews that will include the
+reviewer’s name, date of reviewed, user rating, title of the review, and text reviews.
+
+```{r}
+
+list_link <- scrape(session) %>%
+  html_nodes('a.ipc-title-link-wrapper') %>%
+  html_attr('href')
+
+link_of_list5 <- list_link[1:5]
+
+for (i in 1:5) {
+ link_of_list5[i] <- paste0("https://imdb.com", link_of_list5[i], sep = "")
+}
+
+link_of_list5
+```
+
+```{r}
+library(stringr)
+
+split_links <- strsplit(link_of_list5, "/")
+split_links
+
+unique_ids <- sapply(split_links, function(link) {
+  
+  id_part <- grep("tt[0-9]+", link, value = TRUE)
+  
+  if (length(id_part) > 0) {
+    return(id_part)
+  } else {
+    return(NA)
+  }
+})
+
+# Pasting the Unique ID to imdb site to access the review section
+for (i in 1:5) {
+ unique_ids[i] <- paste0("https://imdb.com/title/",unique_ids[i],"/reviews?ref_=tt_urv", sep = "") }
+
+unique_ids
+```
+
+
+
+```{r}
+
+rowrow <- 1
+put <- 1
+
+review_list <- list()
+rank_one_review <- data.frame()
+rank_two_review <- data.frame()
+rank_three_review <- data.frame()
+rank_four_review <- data.frame()
+rank_five_review <- data.frame()
+
+for (rowrow in 1:5){
+  
+  url  <- unique_ids[rowrow]
+  session2 <- bow(url, user_agent = "Education")
+  webpage <- scrape(session2)
+  
+  nameofreviewer <- html_text(html_nodes(webpage,"span.display-name-link"))
+  nameofreviewer5 <- nameofreviewer[1:5]
+  nameofreviewer5
+
+  date_of_review <- html_text(html_nodes(webpage,"span.review-date"))
+  date_of_review5 <- date_of_review[1:5]
+  date_of_review5
+   
+  user_rating <- html_text(html_nodes(webpage,"span.rating-other-user-rating"))
+  user_rating5 <-  user_rating[1:5]
+  user_rating5
+   
+   
+  title_of_review <- html_text(html_nodes(webpage,"a.title"))
+  title_of_review5 <- title_of_review[1:5]
+  title_of_review5
+  
+  text_review <- html_text(html_nodes(webpage,"div.text.show-more__control"))
+  text_review5 <- text_review[1:5]
+  text_review5
+
+
+  for(put in 1:5){
+  
+    if(rowrow == 1){
+    
+      rank_one_review[put, 1] <- nameofreviewer5[put]
+      rank_one_review[put, 2] <- date_of_review5[put]
+      rank_one_review[put, 3] <- user_rating5[put]
+      rank_one_review[put, 4] <- title_of_review5[put]
+      rank_one_review[put, 5] <- text_review5[put]
+      
+    
+    } else if(rowrow == 2){
+      
+      rank_two_review[put, 1] <- nameofreviewer5[put]
+      rank_two_review[put, 2] <- date_of_review5[put]
+      rank_two_review[put, 3] <- user_rating5[put]
+      rank_two_review[put, 4] <- title_of_review5[put]
+      rank_two_review[put, 5] <- text_review5[put]
+      
+    
+    }else if(rowrow == 3){
+    
+      rank_three_review[put, 1] <- nameofreviewer5[put]
+      rank_three_review[put, 2] <- date_of_review5[put]
+      rank_three_review[put, 3] <- user_rating5[put]
+      rank_three_review[put, 4] <- title_of_review5[put]
+      rank_three_review[put, 5] <- text_review5[put]
+    
+    }else if(rowrow == 4){
+    
+      rank_four_review[put, 1] <- nameofreviewer5[put]
+      rank_four_review[put, 2] <- date_of_review5[put]
+      rank_four_review[put, 3] <- user_rating5[put]
+      rank_four_review[put, 4] <- title_of_review5[put]
+      rank_four_review[put, 5] <- text_review5[put]
+      
+    }else if(rowrow == 5){
+      
+      rank_five_review[put, 1] <- nameofreviewer5[put]
+      rank_five_review[put, 2] <- date_of_review5[put]
+      rank_five_review[put, 3] <- user_rating5[put]
+      rank_five_review[put, 4] <- title_of_review5[put]
+      rank_five_review[put, 5] <- text_review5[put]
+      
+     }
+  }
+  
+  rowrow <- rowrow + 1
+}  
+```
+
+
+3. Create a time series graph for the tv shows released by year. Which year has the most number of tv
+shows released?
+```{r}
+library(ggplot2)
+
+tv_shows_data <- tv_shows_data %>%
+  mutate(Start_Year = as.numeric(str_extract(Year_Released, "\\b\\d{4}\\b"))) %>%
+  filter(!is.na(Start_Year))
+
+
+ggplot(tv_shows_data, aes(x = Start_Year)) +
+  geom_bar(stat = "count", fill = "blue") +
+  labs(title = "Number of TV Shows Released by Year",
+       x = "Start Year of the TV Show",
+       y = "Number of TV Shows") +
+  theme_minimal()
+```
+
+4. Select 3 products from Amazon of the same category. Extract the price, description, ratings and
+reviews of each product.
+```{r,error=TRUE}
+
+
+url <- "https://www.amazon.com/SteelSeries-Apex-Hybrid-Mechanical-Gaming-Keyboard/dp/B07ZGDD6B1/ref=sr_1_1_sspa?_encoding=UTF8&content-id=amzn1.sym.12129333-2117-4490-9c17-6d31baf0582a&keywords=gaming%2Bkeyboard&pd_rd_r=37d1ea2c-8e88-4495-be67-37d3b5a3d1d1&pd_rd_w=pDPnL&pd_rd_wg=vVF4U&pf_rd_p=12129333-2117-4490-9c17-6d31baf0582a&pf_rd_r=MDA7C7ZE453N7YHK4TZK&qid=1701532564&sr=8-1-spons&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1"
+
+session <- bow(url,
+               user_agent = "Educational Purpose")
+session
+
+product_name <- scrape(session) %>%
+                html_nodes("span.a-size-large.product-title-word-break") %>%
+                html_text
+product_name
+
+product_price <- scrape(session) %>%
+    html_nodes("div.a-section.a-spacing-none.aok-align-center") %>%
+    html_text
+product_price
+
+product_description <- scrape(session) %>%
+    html_nodes("div.a-expander-collapsed-height.a-row.a-expander-container.a-spacing-none.a-expander-partial-collapse-container") %>%
+    html_text
+product_description
+
+product_ratings <- scrape(session) %>%
+    html_nodes("span.a-size-base.a-color-base") %>%
+    html_text
+product_ratings
+```
