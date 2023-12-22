@@ -1,6 +1,6 @@
 ---
 title: "RWorksheet#5_group(3)"
-author: "Songaling, Porras, Sumintao, Lumahan"
+author: "Songaling, Porras, Sumintao, Lumahan, Deocampo"
 date: "2023-12-22"
 output: pdf_document
 ---
